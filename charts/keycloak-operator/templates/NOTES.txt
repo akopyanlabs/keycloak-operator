@@ -1,0 +1,60 @@
+Keycloak Operator {{ .Chart.AppVersion }} has been deployed.
+
+Release: "{{ .Release.Name }}"
+Namespace: "{{ .Release.Namespace }}"
+
+Watch scope:
+{{- if eq (include "keycloak-operator.clusterWide" .) "true" }}
+  cluster-wide — the operator manages Keycloak CRs in ALL namespaces
+  (QUARKUS_OPERATOR_SDK_CONTROLLERS_*_NAMESPACES=JOSDK_ALL_NAMESPACES).
+{{- else if empty .Values.watchNamespaces }}
+  namespace-scoped — the operator watches only "{{ .Release.Namespace }}".
+{{- else }}
+  namespaces: {{ .Values.watchNamespaces | join ", " }} (+ "{{ .Release.Namespace }}").
+{{- end }}
+
+1. Check that the operator is up and running:
+
+   kubectl --namespace {{ .Release.Namespace }} get pods -l "app.kubernetes.io/name={{ include "keycloak-operator.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+2. Verify the CRDs are installed:
+
+   kubectl get crds keycloaks.k8s.keycloak.org keycloakrealmimports.k8s.keycloak.org
+
+{{- if .Values.keycloak.enabled }}
+
+3. A Keycloak CR "{{ include "keycloak-operator.keycloakCRName" . }}" was created in
+   "{{ .Release.Namespace }}". Watch its status with:
+
+   kubectl --namespace {{ .Release.Namespace }} get keycloak {{ include "keycloak-operator.keycloakCRName" . }} -o wide
+{{- if eq (include "keycloak-operator.bootstrapAdminInjected" .) "true" }}
+
+   Bootstrap admin credentials (Secret "{{ include "keycloak-operator.bootstrapAdminSecretName" . }}"):
+     username: {{ .Values.keycloak.bootstrapAdmin.username }}
+     password: kubectl --namespace {{ .Release.Namespace }} get secret {{ include "keycloak-operator.bootstrapAdminSecretName" . }} -o jsonpath='{.data.password}' | base64 -d
+{{- end }}
+{{- else }}
+
+3. Create a Keycloak instance with a CR, e.g.:
+
+   cat <<'EOF' | kubectl apply -f -
+   apiVersion: k8s.keycloak.org/v2beta1
+   kind: Keycloak
+   metadata:
+     name: keycloak
+     namespace: {{ .Release.Namespace }}
+   spec:
+     instances: 1
+     ingress:
+       enabled: true
+   EOF
+{{- end }}
+
+NOTE: the CRDs are installed from the chart's `crds/` directory. Helm applies
+them on `helm install` but never upgrades or deletes them on subsequent
+operations. When upgrading the chart to a new operator version, apply the
+updated CRDs manually, e.g.:
+
+  kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-operator/<tag>/kubernetes/
+
+See https://helm.sh/docs/chart_best_practices/custom_resource_definitions/ for details.

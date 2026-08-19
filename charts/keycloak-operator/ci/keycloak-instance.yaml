@@ -1,0 +1,42 @@
+# Installs the Keycloak Operator cluster-wide and creates a production-like
+# Keycloak instance through a `Keycloak` CR.
+#
+# The chart creates the bootstrap admin Secret "<release>-bootstrap-admin"
+# automatically and injects it into `spec.bootstrapAdmin.user.secret`
+# (Keycloak 26+ refuses to start without bootstrap admin credentials).
+# username/password are mandatory when the chart creates the Secret
+# (enforced by values.schema.json). To reference your own Secret instead
+# (keys: username, password), set `keycloak.bootstrapAdmin.existingSecret`.
+#
+# Usage:
+#   helm install keycloak ./charts/keycloak-operator -n keycloak --create-namespace -f ci/keycloak-instance.yaml
+#
+watchNamespaces: "*"
+
+keycloak:
+  enabled: true
+  bootstrapAdmin:
+    username: admin
+    password: change-me
+  spec:
+    instances: 2
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: "2"
+        memory: 2Gi
+    # The Ingress must point to the hostname configured below.
+    ingress:
+      enabled: true
+      className: nginx
+    hostname:
+      hostname: keycloak.example.com
+
+# Optionally import realms right after the instance is up.
+realmImports:
+  - name: my-realm
+    realm:
+      realm: my-realm
+      enabled: true

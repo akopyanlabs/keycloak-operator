@@ -1,0 +1,6 @@
+kubernetes
+.DS_Store
+todo
+
+# Helm packaging output
+*.tgz

@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  # Manual run from the Actions UI ("Run workflow")
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "charts/**"
+      - ".github/workflows/ci.yml"
+  push:
+    branches-ignore:
+      - gh-pages
+    paths:
+      - "charts/**"
+      - ".github/workflows/ci.yml"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: helm lint (default values)
+        run: helm lint charts/keycloak-operator
+
+      - name: helm lint (ci/ values per mode)
+        run: |
+          if compglob=$(compgen -G "charts/keycloak-operator/ci/*.yaml") && [ -n "$compglob" ]; then
+            for f in charts/keycloak-operator/ci/*.yaml; do
+              echo "::group::helm lint $(basename "${f}")"
+              helm lint charts/keycloak-operator -f "${f}"
+              echo "::endgroup::"
+            done
+          fi
+
+      - name: helm template renders without error
+        run: |
+          helm template keycloak-operator charts/keycloak-operator >/dev/null
+          if compglob=$(compgen -G "charts/keycloak-operator/ci/*.yaml") && [ -n "$compglob" ]; then
+            for f in charts/keycloak-operator/ci/*.yaml; do
+              echo "::group::helm template $(basename "${f}")"
+              helm template keycloak-operator charts/keycloak-operator -f "${f}" >/dev/null
+              echo "::endgroup::"
+            done
+          fi

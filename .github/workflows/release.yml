@@ -1,0 +1,129 @@
+name: Release Chart
+
+# Standard chart-releaser flow: releases are driven by pushes to master.
+# cr detects which chart version in Chart.yaml changed since the last
+# release, packages the chart, creates the <chart>-<version> tag and a
+# GitHub Release, and publishes the repository index to the gh-pages
+# branch. No external v* tags are required.
+#
+# The gh-pages branch is created automatically (empty orphan branch via
+# git commit-tree, without switching the working tree), GitHub Pages is
+# enabled best-effort via the API, and README.md from the repository root
+# is synced to gh-pages, where it becomes the site index page.
+on:
+  # Manual run from the Actions UI ("Run workflow"). Path filters do not
+  # apply to workflow_dispatch, so both jobs run (lint -> release).
+  # chart-releaser publishes a new release only when the chart version in
+  # Chart.yaml changed since the last release; the gh-pages steps (branch,
+  # Pages, README sync) run unconditionally.
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - "charts/**"
+      - ".github/workflows/release.yml"
+
+concurrency:
+  group: chart-release
+  cancel-in-progress: false
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: helm lint (default values)
+        run: helm lint charts/keycloak-operator
+
+      - name: helm lint (ci/ values per mode)
+        run: |
+          if compglob=$(compgen -G "charts/keycloak-operator/ci/*.yaml") && [ -n "$compglob" ]; then
+            for f in charts/keycloak-operator/ci/*.yaml; do
+              echo "::group::helm lint $(basename "${f}")"
+              helm lint charts/keycloak-operator -f "${f}"
+              echo "::endgroup::"
+            done
+          fi
+
+      - name: helm template renders without error
+        run: |
+          helm template keycloak-operator charts/keycloak-operator >/dev/null
+          if compglob=$(compgen -G "charts/keycloak-operator/ci/*.yaml") && [ -n "$compglob" ]; then
+            for f in charts/keycloak-operator/ci/*.yaml; do
+              echo "::group::helm template $(basename "${f}")"
+              helm template keycloak-operator charts/keycloak-operator -f "${f}" >/dev/null
+              echo "::endgroup::"
+            done
+          fi
+
+  release:
+    needs: lint
+    permissions:
+      contents: write
+      pages: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Ensure gh-pages branch exists
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            echo "gh-pages branch already exists"
+          else
+            # Empty commit on top of the empty tree, without switching the
+            # working tree: charts/ stays in place for chart-releaser.
+            EMPTY_TREE=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+            COMMIT=$(git commit-tree "$EMPTY_TREE" -m "Initialize gh-pages branch")
+            git push origin "$COMMIT:refs/heads/gh-pages"
+            echo "gh-pages branch created"
+          fi
+
+      - name: Enable GitHub Pages from gh-pages (best effort)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pages" -X POST \
+              -f 'source[branch]=gh-pages' -f 'source[path]=/' >/dev/null 2>&1; then
+            echo "GitHub Pages enabled (gh-pages / root)"
+          else
+            echo "::warning::Could not enable GitHub Pages via API - configure it manually: Settings -> Pages -> Deploy from a branch -> gh-pages / (root)"
+          fi
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.7.0
+        with:
+          charts_dir: charts
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Sync README.md from master to gh-pages
+        run: |
+          git fetch origin '+refs/heads/gh-pages:refs/remotes/origin/gh-pages' '+refs/heads/master:refs/remotes/origin/master'
+          git checkout -f -B gh-pages origin/gh-pages
+          git show origin/master:README.md > README.md
+          # Disable Jekyll so GitHub Pages serves index.yaml as-is.
+          touch .nojekyll
+          git add README.md .nojekyll
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: sync README.md from master"
+            git push origin gh-pages
+            echo "README.md pushed to gh-pages"
+          else
+            echo "README.md on gh-pages is up to date"
+          fi

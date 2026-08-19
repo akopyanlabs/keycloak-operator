@@ -1,0 +1,17 @@
+{{- if and .Values.keycloak.enabled (eq (include "keycloak-operator.bootstrapAdminInjected" .) "true") (empty .Values.keycloak.bootstrapAdmin.existingSecret) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "keycloak-operator.bootstrapAdminSecretName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "keycloak-operator.labels" . | nindent 4 }}
+  {{- with .Values.keycloak.bootstrapAdmin.secretAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+type: Opaque
+stringData:
+  username: {{ required "keycloak.bootstrapAdmin.username is required when the chart creates the bootstrap admin Secret" .Values.keycloak.bootstrapAdmin.username | quote }}
+  password: {{ required "keycloak.bootstrapAdmin.password is required when the chart creates the bootstrap admin Secret" .Values.keycloak.bootstrapAdmin.password | quote }}
+{{- end }}

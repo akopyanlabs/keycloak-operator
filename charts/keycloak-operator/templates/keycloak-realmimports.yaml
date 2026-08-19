@@ -1,0 +1,21 @@
+{{- range .Values.realmImports }}
+---
+apiVersion: k8s.keycloak.org/v2beta1
+kind: KeycloakRealmImport
+metadata:
+  name: {{ required "realmImports[].name is required" .name | trunc 63 | trimSuffix "-" }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "keycloak-operator.labels" $ | nindent 4 }}
+    {{- with .labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  keycloakCRName: {{ default (include "keycloak-operator.keycloakCRName" $) .keycloakCRName | trunc 63 | trimSuffix "-" }}
+  {{- with .resources }}
+  resources:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  realm:
+    {{- required "realmImports[].realm is required" .realm | toYaml | nindent 4 }}
+{{- end }}

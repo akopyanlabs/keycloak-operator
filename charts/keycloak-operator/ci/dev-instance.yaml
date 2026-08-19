@@ -1,0 +1,22 @@
+# A quick local/dev Keycloak behind an ingress, without TLS and with relaxed
+# hostname settings. Not suitable for production.
+#
+# Usage:
+#   helm install keycloak ./charts/keycloak-operator -n keycloak --create-namespace -f ci/dev-instance.yaml
+#
+watchNamespaces: "*"
+
+keycloak:
+  enabled: true
+  bootstrapAdmin:
+    username: admin
+    password: change-me
+  spec:
+    instances: 1
+    http:
+      httpEnabled: true
+    hostname:
+      strict: false
+    ingress:
+      enabled: true
+      className: nginx

@@ -1,0 +1,10 @@
+# Restrict the operator to a fixed set of namespaces instead of watching the
+# whole cluster (the default).
+#
+# The chart will create RoleBindings in each listed namespace (plus the
+# release namespace) and set
+# QUARKUS_OPERATOR_SDK_CONTROLLERS_*_NAMESPACES=keycloak-prod,keycloak-dev.
+#
+watchNamespaces:
+  - keycloak-prod
+  - keycloak-dev

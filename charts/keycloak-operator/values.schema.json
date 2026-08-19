@@ -1,0 +1,174 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "keycloak-operator values",
+  "type": "object",
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "registry": { "type": "string" },
+        "repository": { "type": "string" },
+        "tag": { "type": "string" },
+        "digest": { "type": "string" },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"]
+        }
+      }
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "nameOverride": { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "watchNamespaces": {
+      "description": "\"*\" for cluster-wide (default), \"\" for the release namespace only, or a non-empty list of namespaces.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["*", ""]
+        },
+        {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        }
+      ]
+    },
+    "keycloakImage": {
+      "type": "object",
+      "properties": {
+        "registry": { "type": "string" },
+        "repository": { "type": "string" },
+        "tag": { "type": "string" },
+        "digest": { "type": "string" }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "annotations": { "type": "object" },
+        "labels": { "type": "object" }
+      }
+    },
+    "rbac": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" }
+      }
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "ports": { "type": "array" }
+      }
+    },
+    "serviceMonitor": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "namespace": { "type": "string" },
+        "interval": { "type": "string" },
+        "path": { "type": "string" },
+        "labels": { "type": "object" },
+        "relabelings": { "type": "array" }
+      }
+    },
+    "resources": { "type": "object" },
+    "podAnnotations": { "type": "object" },
+    "podLabels": { "type": "object" },
+    "podSecurityContext": { "type": "object" },
+    "securityContext": { "type": "object" },
+    "nodeSelector": { "type": "object" },
+    "tolerations": { "type": "array" },
+    "affinity": { "type": "object" },
+    "topologySpreadConstraints": { "type": "array" },
+    "priorityClassName": { "type": "string" },
+    "extraEnv": { "type": "array" },
+    "extraEnvFrom": { "type": "array" },
+    "extraVolumes": { "type": "array" },
+    "extraVolumeMounts": { "type": "array" },
+    "livenessProbe": { "type": "object" },
+    "readinessProbe": { "type": "object" },
+    "startupProbe": { "type": "object" },
+    "keycloak": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "nameOverride": { "type": "string" },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" },
+        "spec": { "type": "object" },
+        "bootstrapAdmin": {
+          "type": "object",
+          "properties": {
+            "existingSecret": { "type": "string" },
+            "create": { "type": "boolean" },
+            "secretName": { "type": "string" },
+            "username": { "type": "string" },
+            "password": { "type": "string" },
+            "secretAnnotations": { "type": "object" }
+          }
+        }
+      }
+    },
+    "realmImports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "realm"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "keycloakCRName": { "type": "string", "minLength": 1 },
+          "labels": { "type": "object" },
+          "resources": { "type": "object" },
+          "realm": { "type": "object" }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "keycloak": {
+            "required": ["enabled", "spec", "bootstrapAdmin"],
+            "properties": {
+              "enabled": { "const": true },
+              "spec": { "not": { "required": ["bootstrapAdmin"] } },
+              "bootstrapAdmin": {
+                "required": ["existingSecret", "create"],
+                "properties": {
+                  "existingSecret": { "const": "" },
+                  "create": { "const": true }
+                }
+              }
+            }
+          }
+        },
+        "required": ["keycloak"]
+      },
+      "then": {
+        "properties": {
+          "keycloak": {
+            "bootstrapAdmin": {
+              "required": ["username", "password"],
+              "properties": {
+                "username": { "minLength": 1 },
+                "password": { "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

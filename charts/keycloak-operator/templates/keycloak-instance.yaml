@@ -1,0 +1,22 @@
+{{- if .Values.keycloak.enabled }}
+{{- $spec := deepCopy (.Values.keycloak.spec | default dict) -}}
+{{- if eq (include "keycloak-operator.bootstrapAdminInjected" .) "true" -}}
+{{-   $_ := set $spec "bootstrapAdmin" (dict "user" (dict "secret" (include "keycloak-operator.bootstrapAdminSecretName" . | trunc 63 | trimSuffix "-"))) -}}
+{{- end }}
+apiVersion: k8s.keycloak.org/v2beta1
+kind: Keycloak
+metadata:
+  name: {{ include "keycloak-operator.keycloakCRName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "keycloak-operator.labels" . | nindent 4 }}
+    {{- with .Values.keycloak.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.keycloak.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- required "keycloak.spec is required when keycloak.enabled is true" $spec | toYaml | nindent 2 }}
+{{- end }}

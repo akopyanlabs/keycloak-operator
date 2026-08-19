@@ -1,0 +1,315 @@
+# Default values for keycloak-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+## @param replicaCount Number of replicas of the operator Deployment.
+## The upstream operator does not run leader election, so keep this at 1;
+## running more replicas will cause duplicate reconciliations.
+##
+replicaCount: 1
+
+## Operator container image.
+##
+image:
+  registry: quay.io
+  repository: keycloak/keycloak-operator
+  ## @param image.tag Image tag. Defaults to the chart appVersion (upstream Keycloak version).
+  ##
+  tag: ""
+  ## @param image.digest Image digest, e.g. `sha256:...`. When set it takes precedence over `tag`.
+  ##
+  digest: ""
+  ## @param image.pullPolicy Image pull policy. Upstream manifests use `Always`.
+  ##
+  pullPolicy: Always
+
+## @param imagePullSecrets Global Docker registry secret names as an array.
+##
+imagePullSecrets: []
+  # - name: my-registry-secret
+
+## @param nameOverride Partially override the resource name (defaults to the chart name).
+##
+nameOverride: ""
+
+## @param fullnameOverride Fully override the generated resource name.
+##
+fullnameOverride: ""
+
+## @param watchNamespaces Scope of the operator.
+##   "*"                — cluster-wide: the operator watches and manages Keycloak
+##                        CRs in ALL namespaces (default). ClusterRoleBindings are used.
+##   ""                 — the operator watches only its own (release) namespace.
+##   [ns-a, ns-b, ...]  — the operator watches exactly the listed namespaces.
+##                        RoleBindings are created in each of them (plus the
+##                        release namespace).
+##
+watchNamespaces: "*"
+# watchNamespaces:
+#   - keycloak-prod
+#   - keycloak-dev
+
+## Keycloak image the operator deploys for `Keycloak` CR instances
+## (sets RELATED_IMAGE_KEYCLOAK). Defaults to quay.io/keycloak/keycloak:<appVersion>.
+##
+keycloakImage:
+  registry: quay.io
+  repository: keycloak/keycloak
+  ## @param keycloakImage.tag Keycloak image tag. Defaults to the chart appVersion.
+  ##
+  tag: ""
+  ## @param keycloakImage.digest Keycloak image digest. When set it takes precedence over `tag`.
+  ##
+  digest: ""
+
+serviceAccount:
+  ## @param serviceAccount.create Specifies whether a ServiceAccount should be created.
+  ##
+  create: true
+  ## @param serviceAccount.name The name of the ServiceAccount to use.
+  ## If not set and create is true, a name is generated using the fullname template.
+  ##
+  name: ""
+  ## @param serviceAccount.annotations Additional ServiceAccount annotations.
+  ##
+  annotations: {}
+  ## @param serviceAccount.labels Additional ServiceAccount labels.
+  ##
+  labels: {}
+
+rbac:
+  ## @param rbac.create Specifies whether ClusterRoles and (Cluster)RoleBindings should be created.
+  ## Set to false if you manage the operator RBAC yourself. Note that the CRDs
+  ## themselves are always installed from the `crds/` directory.
+  ##
+  create: true
+
+## Operator service (used for in-cluster health checks and metrics scraping).
+##
+service:
+  ## @param service.type Kubernetes Service type.
+  ##
+  type: ClusterIP
+  ## @param service.ports Service ports. `targetPort` references the container port name.
+  ##
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+
+## Prometheus Operator ServiceMonitor for operator metrics (Quarkus `/q/metrics`).
+## Requires the `monitoring.coreos.com/v1` CRDs to be present in the cluster.
+##
+serviceMonitor:
+  ## @param serviceMonitor.enabled Create a ServiceMonitor for scraping the operator metrics.
+  ##
+  enabled: false
+  ## @param serviceMonitor.namespace Namespace where the ServiceMonitor is created (defaults to the release namespace).
+  ##
+  namespace: ""
+  ## @param serviceMonitor.interval Scrape interval.
+  ##
+  interval: 30s
+  ## @param serviceMonitor.path Metrics path.
+  ##
+  path: /q/metrics
+  ## @param serviceMonitor.labels Additional labels for the ServiceMonitor
+  ## (used by Prometheus to discover it, e.g. `release: prometheus`).
+  ##
+  labels: {}
+  ## @param serviceMonitor.relabelings Relabeling configuration for the endpoints.
+  ##
+  relabelings: []
+
+## @param resources Compute resources for the operator container.
+## Defaults are taken from the upstream operator manifests.
+##
+resources:
+  requests:
+    cpu: 300m
+    memory: 450Mi
+  limits:
+    cpu: 700m
+    memory: 450Mi
+
+## @param podAnnotations Additional annotations for the operator Pod.
+##
+podAnnotations: {}
+
+## @param podLabels Additional labels for the operator Pod.
+##
+podLabels: {}
+
+## @param podSecurityContext Security context for the operator Pod.
+##
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+## @param securityContext Security context for the operator container.
+##
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+## @param nodeSelector Node labels for pod assignment.
+##
+nodeSelector: {}
+
+## @param tolerations Tolerations for pod assignment.
+##
+tolerations: []
+
+## @param affinity Affinity for pod assignment.
+##
+affinity: {}
+
+## @param topologySpreadConstraints Topology spread constraints for pod assignment.
+##
+topologySpreadConstraints: []
+
+## @param priorityClassName Priority class name for the operator Pod.
+##
+priorityClassName: ""
+
+## @param extraEnv Additional environment variables for the operator container,
+## e.g. `KC_TRUST_CERTS` or Java options (`JAVA_OPTS_KAFKA_*` is not used, see
+## upstream docs for supported variables).
+##
+extraEnv: []
+  # - name: KC_TRUST_CERTS
+  #   value: custom-ca-bundle
+
+## @param extraEnvFrom Additional envFrom sources for the operator container.
+##
+extraEnvFrom: []
+  # - configMapRef:
+  #     name: keycloak-operator-env
+
+## @param extraVolumes Additional volumes for the operator Pod,
+## e.g. a ConfigMap with a custom CA bundle to be mounted and trusted.
+##
+extraVolumes: []
+  # - name: trusted-ca
+  #   configMap:
+  #     name: custom-ca-bundle
+
+## @param extraVolumeMounts Additional volumeMounts for the operator container.
+##
+extraVolumeMounts: []
+  # - name: trusted-ca
+  #   mountPath: /etc/x509/ca
+
+## Health probes for the operator container.
+## Defaults are taken from the upstream operator manifests.
+## Set a probe to `null` (or `{}`) to remove it.
+##
+livenessProbe:
+  httpGet:
+    path: /q/health/live
+    port: http
+    scheme: HTTP
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  httpGet:
+    path: /q/health/ready
+    port: http
+    scheme: HTTP
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+startupProbe:
+  httpGet:
+    path: /q/health/started
+    port: http
+    scheme: HTTP
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+## Optionally manage a Keycloak instance with a `Keycloak` CR created by this chart.
+## The CR is created in the release namespace and watched by the operator
+## (make sure its namespace is within `watchNamespaces`).
+##
+keycloak:
+  ## @param keycloak.enabled Create a `Keycloak` CR together with the operator.
+  ##
+  enabled: false
+  ## @param keycloak.nameOverride Name of the `Keycloak` CR. Defaults to the release name.
+  ##
+  nameOverride: ""
+  ## @param keycloak.labels Additional labels for the `Keycloak` CR.
+  ##
+  labels: {}
+  ## @param keycloak.annotations Additional annotations for the `Keycloak` CR.
+  ##
+  annotations: {}
+  ## Bootstrap admin credentials. Keycloak 26+ refuses to start without them.
+  ## Unless you set `spec.bootstrapAdmin` yourself, the chart injects
+  ## `spec.bootstrapAdmin.user.secret` pointing to the Secret name below
+  ## (the Secret must contain the keys `username` and `password`).
+  ##
+  bootstrapAdmin:
+    ## @param keycloak.bootstrapAdmin.existingSecret Use an existing Secret (keys: `username`, `password`) instead of creating one. Takes precedence over `create`.
+    ##
+    existingSecret: ""
+    ## @param keycloak.bootstrapAdmin.create Create a Secret with the credentials below. Ignored when `existingSecret` is set or `spec.bootstrapAdmin` is configured manually.
+    ##
+    create: true
+    ## @param keycloak.bootstrapAdmin.secretName Name of the created Secret. Defaults to `<keycloak CR name>-bootstrap-admin`.
+    ##
+    secretName: ""
+    ## @param keycloak.bootstrapAdmin.username Bootstrap admin username. Required when the chart creates the Secret.
+    ##
+    username: admin
+    ## @param keycloak.bootstrapAdmin.password Bootstrap admin password. Required when the chart creates the Secret — there is no generated default (enforced by values.schema.json).
+    ##
+    password: ""
+    ## @param keycloak.bootstrapAdmin.secretAnnotations Additional annotations for the created Secret.
+    ##
+    secretAnnotations: {}
+  ## @param keycloak.spec `spec` of the `Keycloak` CR (k8s.keycloak.org/v2beta1).
+  ## See https://www.keycloak.org/operator/custom-resources for the full reference.
+  ##
+  spec: {}
+  # spec:
+  #   instances: 2
+  #   resources:
+  #     requests:
+  #       cpu: 500m
+  #       memory: 1Gi
+  #   ingress:
+  #     enabled: true
+  #     className: nginx
+  #   hostname:
+  #     hostname: keycloak.example.com
+
+## Optionally manage `KeycloakRealmImport` CRs (full list of items).
+## Each item becomes one KeycloakRealmImport resource in the release namespace.
+##
+realmImports: []
+  # - name: my-realm                     # required, name of the KeycloakRealmImport CR
+  #   keycloakCRName: my-keycloak        # optional, defaults to the `keycloak` CR name (or release name)
+  #   labels: {}
+  #   resources: {}
+  #   realm:                             # required, full realm representation
+  #     realm: my-realm
+  #     enabled: true
+  #     clients: []
+  #     roles:
+  #       realm: []
+  #     users: []
