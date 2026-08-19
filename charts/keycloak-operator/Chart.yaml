@@ -33,11 +33,3 @@ annotations:
       url: https://www.keycloak.org/operator
     - name: Source
       url: https://github.com/keycloak/keycloak
-  artifacthub.io/images: |
-    - name: keycloak-operator
-      image: quay.io/keycloak/keycloak-operator:26.7.2
-    - name: keycloak
-      image: quay.io/keycloak/keycloak:26.7.2
-  artifacthub.io/changes: |
-    - Ship the Apache-2.0 license inside the chart package
-    - Add Artifact Hub image annotations

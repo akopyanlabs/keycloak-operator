@@ -29,10 +29,11 @@ The command deploys the operator to the `keycloak` namespace. See
 `helm install --help` for all options.
 
 > **CRD lifecycle:** the CRDs (`keycloaks`, `keycloakrealmimports`,
-> `keycloakoidcclients`, `keycloaksamlclients`) live in the chart's `crds/`
-> directory. Helm applies them on `helm install`, but — by design — never
-> upgrades or deletes them on `helm upgrade` / `helm uninstall`. See
-> [Upgrading](#upgrading) below.
+> `keycloakoidcclients`, `keycloaksamlclients`) ship as regular chart
+> resources: `helm install` and `helm upgrade` create and update them
+> automatically. They carry `helm.sh/resource-policy: keep`, so
+> `helm uninstall` leaves them — and the Keycloak resources — in place.
+> See [Uninstalling](#uninstalling) below.
 
 ## Installing a Keycloak instance
 
@@ -93,20 +94,12 @@ together with a command to read the generated password.
 
 ## Upgrading
 
-1. Apply the CRDs matching the new chart version (Helm does not upgrade
-   `crds/` automatically):
+```console
+helm upgrade keycloak ./charts/keycloak-operator --namespace keycloak
+```
 
-   ```console
-   kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-operator/<tag>/kubernetes/
-   ```
-
-   (or from this repository: `kubectl apply -f kubernetes/` at the matching tag)
-
-2. Upgrade the release:
-
-   ```console
-   helm upgrade keycloak ./charts/keycloak-operator --namespace keycloak
-   ```
+The CRDs are part of the chart templates and are updated by the same
+`helm upgrade` — no manual `kubectl apply` is needed.
 
 ## Uninstalling
 
@@ -115,8 +108,9 @@ helm uninstall keycloak --namespace keycloak
 ```
 
 This removes the operator, its RBAC and the CRs created by the chart, but keeps
-the cluster-scoped CRDs and the Keycloak resources managed by them. To remove
-the CRDs too (⚠️ this cascades to all Keycloak deployments managed by CRs):
+the cluster-scoped CRDs (`helm.sh/resource-policy: keep`) and the Keycloak
+resources managed by them. To remove the CRDs too (⚠️ this cascades to all
+Keycloak deployments managed by CRs):
 
 ```console
 kubectl delete crd keycloaks.k8s.keycloak.org keycloakrealmimports.k8s.keycloak.org \

@@ -2,13 +2,15 @@
 apiVersion: "apiextensions.k8s.io/v1"
 kind: "CustomResourceDefinition"
 metadata:
-  name: "keycloakoidcclients.k8s.keycloak.org"
+  annotations:
+    helm.sh/resource-policy: keep
+  name: "keycloaksamlclients.k8s.keycloak.org"
 spec:
   group: "k8s.keycloak.org"
   names:
-    kind: "KeycloakOIDCClient"
-    plural: "keycloakoidcclients"
-    singular: "keycloakoidcclient"
+    kind: "KeycloakSAMLClient"
+    plural: "keycloaksamlclients"
+    singular: "keycloaksamlclient"
   scope: "Namespaced"
   versions:
   - name: "v2alpha1"
@@ -19,32 +21,16 @@ spec:
             properties:
               client:
                 properties:
+                  allowEcpFlow:
+                    description: "Allow ECP (Enhanced Client or Proxy) flow"
+                    type: "boolean"
                   appUrl:
                     description: "URL to the application's homepage that is represented\
                       \ by this client"
                     type: "string"
-                  auth:
-                    description: "Authentication configuration for this client"
-                    properties:
-                      certificate:
-                        description: "Public key used to authenticate this client\
-                          \ with Signed JWT authentication"
-                        type: "string"
-                      method:
-                        description: "Client authentication method (e.g. `client-secret`,\
-                          \ `client-secret-jwt`)"
-                        type: "string"
-                      secretRef:
-                        description: "Secret containing the client secret"
-                        properties:
-                          key:
-                            type: "string"
-                          name:
-                            type: "string"
-                          optional:
-                            type: "boolean"
-                        type: "object"
-                    type: "object"
+                  clientSignatureRequired:
+                    description: "Require client to sign SAML requests"
+                    type: "boolean"
                   createdTimestamp:
                     description: "Timestamp when the client was created"
                     type: "integer"
@@ -57,19 +43,27 @@ spec:
                   enabled:
                     description: "Whether this client is enabled"
                     type: "boolean"
-                  loginFlows:
-                    description: "Login flows that are enabled for this client"
-                    items:
-                      enum:
-                      - "CIBA"
-                      - "DEVICE"
-                      - "DIRECT_GRANT"
-                      - "IMPLICIT"
-                      - "SERVICE_ACCOUNT"
-                      - "STANDARD"
-                      - "TOKEN_EXCHANGE"
-                      type: "string"
-                    type: "array"
+                  forceNameIdFormat:
+                    description: "Force the specified Name ID format even if the client\
+                      \ requests a different one"
+                    type: "boolean"
+                  forcePostBinding:
+                    description: "Force POST binding for SAML responses"
+                    type: "boolean"
+                  frontChannelLogout:
+                    description: "Use front-channel logout (browser redirect)"
+                    type: "boolean"
+                  includeAuthnStatement:
+                    description: "Include AuthnStatement in the SAML response"
+                    type: "boolean"
+                  nameIdFormat:
+                    description: "Name ID format to use for the subject"
+                    enum:
+                    - "email"
+                    - "persistent"
+                    - "transient"
+                    - "username"
+                    type: "string"
                   redirectUris:
                     description: "URIs that the browser can redirect to after login"
                     items:
@@ -80,20 +74,32 @@ spec:
                     items:
                       type: "string"
                     type: "array"
-                  serviceAccountRoles:
-                    description: "Roles assigned to the service account"
-                    items:
-                      type: "string"
-                    type: "array"
+                  signAssertions:
+                    description: "Sign SAML assertions"
+                    type: "boolean"
+                  signDocuments:
+                    description: "Sign SAML documents on the server side"
+                    type: "boolean"
+                  signatureAlgorithm:
+                    description: "Signature algorithm for signing SAML documents"
+                    enum:
+                    - "DSA_SHA1"
+                    - "RSA_SHA1"
+                    - "RSA_SHA256"
+                    - "RSA_SHA256_MGF1"
+                    - "RSA_SHA512"
+                    - "RSA_SHA512_MGF1"
+                    type: "string"
+                  signatureCanonicalizationMethod:
+                    description: "Canonicalization method for XML signatures"
+                    type: "string"
+                  signingCertificate:
+                    description: "X.509 certificate for signing (PEM format, without\
+                      \ headers)"
+                    type: "string"
                   updatedTimestamp:
                     description: "Timestamp when the client was last updated"
                     type: "integer"
-                  webOrigins:
-                    description: "Web origins that are allowed to make requests to\
-                      \ this client"
-                    items:
-                      type: "string"
-                    type: "array"
                 type: "object"
               keycloakCRName:
                 description: "The name of the Keycloak CR to reference, in the same\

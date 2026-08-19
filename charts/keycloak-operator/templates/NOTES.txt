@@ -50,11 +50,10 @@ Watch scope:
    EOF
 {{- end }}
 
-NOTE: the CRDs are installed from the chart's `crds/` directory. Helm applies
-them on `helm install` but never upgrades or deletes them on subsequent
-operations. When upgrading the chart to a new operator version, apply the
-updated CRDs manually, e.g.:
+NOTE: the Keycloak CRDs are regular chart resources: `helm install` and
+`helm upgrade` create and update them automatically. They are annotated with
+"helm.sh/resource-policy: keep", so `helm uninstall` does NOT delete them
+(this protects existing Keycloak resources from cascading deletion).
+To remove the CRDs manually:
 
-  kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-operator/<tag>/kubernetes/
-
-See https://helm.sh/docs/chart_best_practices/custom_resource_definitions/ for details.
+  kubectl delete crd keycloaks.k8s.keycloak.org keycloakrealmimports.k8s.keycloak.org keycloakoidcclients.k8s.keycloak.org keycloaksamlclients.k8s.keycloak.org
