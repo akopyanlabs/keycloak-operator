@@ -6,17 +6,17 @@
 #
 watchNamespaces: "*"
 
-keycloak:
-  enabled: true
-  bootstrapAdmin:
-    username: admin
-    password: change-me
-  spec:
-    instances: 1
-    http:
-      httpEnabled: true
-    hostname:
-      strict: false
-    ingress:
-      enabled: true
-      className: nginx
+keycloakInstances:
+  - name: keycloak
+    bootstrapAdmin:
+      username: admin
+      password: change-me
+    spec:
+      instances: 1
+      http:
+        httpEnabled: true
+      hostname:
+        strict: false
+      ingress:
+        enabled: true
+        className: nginx

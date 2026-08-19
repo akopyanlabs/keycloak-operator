@@ -241,69 +241,42 @@ startupProbe:
   failureThreshold: 3
   successThreshold: 1
 
-## Optionally manage a Keycloak instance with a `Keycloak` CR created by this chart.
-## The CR is created in the release namespace and watched by the operator
-## (make sure its namespace is within `watchNamespaces`).
+## Keycloak instances managed through `Keycloak` CRs created by this chart.
+## Each list entry becomes one Keycloak CR in the release namespace, watched
+## by the operator (cluster-wide by default). Keycloak 26+ refuses to start
+## without bootstrap admin credentials: unless you set `spec.bootstrapAdmin`
+## yourself, the chart injects it pointing to the per-instance Secret
+## (see `bootstrapAdmin` below).
 ##
-keycloak:
-  ## @param keycloak.enabled Create a `Keycloak` CR together with the operator.
-  ##
-  enabled: false
-  ## @param keycloak.nameOverride Name of the `Keycloak` CR. Defaults to the release name.
-  ##
-  nameOverride: ""
-  ## @param keycloak.labels Additional labels for the `Keycloak` CR.
-  ##
-  labels: {}
-  ## @param keycloak.annotations Additional annotations for the `Keycloak` CR.
-  ##
-  annotations: {}
-  ## Bootstrap admin credentials. Keycloak 26+ refuses to start without them.
-  ## Unless you set `spec.bootstrapAdmin` yourself, the chart injects
-  ## `spec.bootstrapAdmin.user.secret` pointing to the Secret name below
-  ## (the Secret must contain the keys `username` and `password`).
-  ##
-  bootstrapAdmin:
-    ## @param keycloak.bootstrapAdmin.existingSecret Use an existing Secret (keys: `username`, `password`) instead of creating one. Takes precedence over `create`.
-    ##
-    existingSecret: ""
-    ## @param keycloak.bootstrapAdmin.create Create a Secret with the credentials below. Ignored when `existingSecret` is set or `spec.bootstrapAdmin` is configured manually.
-    ##
-    create: true
-    ## @param keycloak.bootstrapAdmin.secretName Name of the created Secret. Defaults to `<keycloak CR name>-bootstrap-admin`.
-    ##
-    secretName: ""
-    ## @param keycloak.bootstrapAdmin.username Bootstrap admin username. Required when the chart creates the Secret.
-    ##
-    username: admin
-    ## @param keycloak.bootstrapAdmin.password Bootstrap admin password. Required when the chart creates the Secret — there is no generated default (enforced by values.schema.json).
-    ##
-    password: ""
-    ## @param keycloak.bootstrapAdmin.secretAnnotations Additional annotations for the created Secret.
-    ##
-    secretAnnotations: {}
-  ## @param keycloak.spec `spec` of the `Keycloak` CR (k8s.keycloak.org/v2beta1).
-  ## See https://www.keycloak.org/operator/custom-resources for the full reference.
-  ##
-  spec: {}
-  # spec:
-  #   instances: 2
-  #   resources:
-  #     requests:
-  #       cpu: 500m
-  #       memory: 1Gi
-  #   ingress:
-  #     enabled: true
-  #     className: nginx
-  #   hostname:
-  #     hostname: keycloak.example.com
+keycloakInstances: []
+  # - name: keycloak               # required, name of the Keycloak CR
+  #   enabled: true                  # optional, set to false to skip this instance
+  #   labels: {}
+  #   annotations: {}
+  #   bootstrapAdmin:
+  #     # existingSecret: ""          # use an existing Secret (keys: username, password) instead of creating one
+  #     create: true
+  #     # secretName: ""              # default: <name>-bootstrap-admin
+  #     username: admin
+  #     password: change-me           # required when the chart creates the Secret
+  #   spec:                           # spec of the Keycloak CR (k8s.keycloak.org/v2beta1)
+  #     instances: 2
+  #     resources:
+  #       requests:
+  #         cpu: 500m
+  #         memory: 1Gi
+  #     ingress:
+  #       enabled: true
+  #       className: nginx
+  #     hostname:
+  #       hostname: keycloak.example.com
 
 ## Optionally manage `KeycloakRealmImport` CRs (full list of items).
 ## Each item becomes one KeycloakRealmImport resource in the release namespace.
 ##
 realmImports: []
   # - name: my-realm                     # required, name of the KeycloakRealmImport CR
-  #   keycloakCRName: my-keycloak        # optional, defaults to the `keycloak` CR name (or release name)
+  #   keycloakCRName: keycloak         # defaults to the only enabled instance; required when several are enabled
   #   labels: {}
   #   resources: {}
   #   realm:                             # required, full realm representation

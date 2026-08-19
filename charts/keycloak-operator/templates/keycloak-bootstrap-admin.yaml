@@ -1,17 +1,26 @@
-{{- if and .Values.keycloak.enabled (eq (include "keycloak-operator.bootstrapAdminInjected" .) "true") (empty .Values.keycloak.bootstrapAdmin.existingSecret) }}
+{{- range $instance := .Values.keycloakInstances }}
+{{-   $ba := $instance.bootstrapAdmin | default dict }}
+{{-   $spec := $instance.spec | default dict }}
+{{-   if and (dig "enabled" true $instance)
+        (not (hasKey $spec "bootstrapAdmin"))
+        (empty $ba.existingSecret)
+        ($ba.create | default true) }}
+{{-     $secretName := $ba.secretName | default (printf "%s-bootstrap-admin" $instance.name) | trunc 63 | trimSuffix "-" }}
+---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ include "keycloak-operator.bootstrapAdminSecretName" . }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ $secretName }}
+  namespace: {{ $.Release.Namespace }}
   labels:
-    {{- include "keycloak-operator.labels" . | nindent 4 }}
-  {{- with .Values.keycloak.bootstrapAdmin.secretAnnotations }}
+    {{- include "keycloak-operator.labels" $ | nindent 4 }}
+  {{- with $ba.secretAnnotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 type: Opaque
 stringData:
-  username: {{ required "keycloak.bootstrapAdmin.username is required when the chart creates the bootstrap admin Secret" .Values.keycloak.bootstrapAdmin.username | quote }}
-  password: {{ required "keycloak.bootstrapAdmin.password is required when the chart creates the bootstrap admin Secret" .Values.keycloak.bootstrapAdmin.password | quote }}
+  username: {{ required (printf "keycloakInstances[%s].bootstrapAdmin.username is required when the chart creates the Secret" $instance.name) $ba.username | quote }}
+  password: {{ required (printf "keycloakInstances[%s].bootstrapAdmin.password is required when the chart creates the Secret" $instance.name) $ba.password | quote }}
+{{-   end }}
 {{- end }}

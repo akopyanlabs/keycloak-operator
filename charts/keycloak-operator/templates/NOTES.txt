@@ -21,17 +21,28 @@ Watch scope:
 
    kubectl get crds keycloaks.k8s.keycloak.org keycloakrealmimports.k8s.keycloak.org
 
-{{- if .Values.keycloak.enabled }}
+{{- $instances := list }}
+{{- range .Values.keycloakInstances }}
+{{-   if dig "enabled" true . }}
+{{-     $instances = append $instances . }}
+{{-   end }}
+{{- end }}
+{{- if $instances }}
 
-3. A Keycloak CR "{{ include "keycloak-operator.keycloakCRName" . }}" was created in
-   "{{ .Release.Namespace }}". Watch its status with:
-
-   kubectl --namespace {{ .Release.Namespace }} get keycloak {{ include "keycloak-operator.keycloakCRName" . }} -o wide
-{{- if eq (include "keycloak-operator.bootstrapAdminInjected" .) "true" }}
-
-   Bootstrap admin credentials (Secret "{{ include "keycloak-operator.bootstrapAdminSecretName" . }}"):
-     username: {{ .Values.keycloak.bootstrapAdmin.username }}
-     password: kubectl --namespace {{ .Release.Namespace }} get secret {{ include "keycloak-operator.bootstrapAdminSecretName" . }} -o jsonpath='{.data.password}' | base64 -d
+3. The following Keycloak instances were created in "{{ .Release.Namespace }}":
+{{- range $instance := $instances }}
+   - {{ $instance.name }}:
+       kubectl --namespace {{ $.Release.Namespace }} get keycloak {{ $instance.name }} -o wide
+{{-   $ba := $instance.bootstrapAdmin | default dict }}
+{{-   $spec := $instance.spec | default dict }}
+{{-   if and (not (hasKey $spec "bootstrapAdmin")) (or $ba.existingSecret ($ba.create | default true)) }}
+{{-     $secretName := $ba.existingSecret | default $ba.secretName | default (printf "%s-bootstrap-admin" $instance.name) }}
+       Bootstrap admin credentials (Secret "{{ $secretName }}"):
+       {{- if $ba.username }}
+         username: {{ $ba.username }}
+       {{- end }}
+         password: kubectl --namespace {{ $.Release.Namespace }} get secret {{ $secretName }} -o jsonpath='{.data.password}' | base64 -d
+{{-   end }}
 {{- end }}
 {{- else }}
 

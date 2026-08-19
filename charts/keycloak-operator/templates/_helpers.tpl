@@ -115,36 +115,3 @@ Value of the QUARKUS_OPERATOR_SDK_CONTROLLERS_*_NAMESPACES environment variables
 {{- join "," .Values.watchNamespaces -}}
 {{- end -}}
 {{- end -}}
-
-{{/*
-Name of the `Keycloak` CR optionally created by this chart.
-Used as the default `keycloakCRName` for `realmImports` entries.
-*/}}
-{{- define "keycloak-operator.keycloakCRName" -}}
-{{- default .Release.Name .Values.keycloak.nameOverride | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
-Name of the Secret holding the bootstrap admin credentials referenced by
-`spec.bootstrapAdmin.user.secret`. Prefers an existing Secret when set.
-*/}}
-{{- define "keycloak-operator.bootstrapAdminSecretName" -}}
-{{- $name := .Values.keycloak.bootstrapAdmin.existingSecret | default .Values.keycloak.bootstrapAdmin.secretName | default (printf "%s-bootstrap-admin" (include "keycloak-operator.keycloakCRName" .)) -}}
-{{- $name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
-Returns "true" when the chart should inject `spec.bootstrapAdmin` into the
-`Keycloak` CR (i.e. the user has not configured `spec.bootstrapAdmin` manually
-and either an existing Secret is referenced or the Secret should be created).
-*/}}
-{{- define "keycloak-operator.bootstrapAdminInjected" -}}
-{{- $spec := .Values.keycloak.spec | default dict -}}
-{{- if hasKey $spec "bootstrapAdmin" -}}
-{{- false -}}
-{{- else if or .Values.keycloak.bootstrapAdmin.existingSecret .Values.keycloak.bootstrapAdmin.create -}}
-{{- true -}}
-{{- else -}}
-{{- false -}}
-{{- end -}}
-{{- end -}}

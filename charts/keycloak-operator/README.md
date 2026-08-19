@@ -37,12 +37,19 @@ The command deploys the operator to the `keycloak` namespace. See
 
 ## Installing a Keycloak instance
 
-Either let the chart create the CR (see `ci/keycloak-instance.yaml`):
+Either let the chart create the CRs via `keycloakInstances` (see
+`ci/keycloak-instance.yaml`):
 
-```console
-helm install keycloak ./charts/keycloak-operator \
-  --namespace keycloak --create-namespace \
-  -f ci/keycloak-instance.yaml
+```yaml
+keycloakInstances:
+  - name: keycloak
+    bootstrapAdmin:
+      username: admin
+      password: change-me
+    spec:
+      instances: 1
+      ingress:
+        enabled: true
 ```
 
 or apply any `Keycloak` CR yourself — the operator watches the whole cluster by
@@ -60,29 +67,66 @@ spec:
     enabled: true
 ```
 
+### Multiple instances
+
+`keycloakInstances` is a list — every entry becomes its own `Keycloak` CR with
+its own bootstrap admin Secret. Set `enabled: false` to keep an instance in
+values without creating it:
+
+```yaml
+keycloakInstances:
+  - name: keycloak-prod
+    bootstrapAdmin:
+      username: admin
+      password: prod-secret
+    spec:
+      instances: 2
+      hostname:
+        hostname: keycloak.example.com
+  - name: keycloak-staging
+    enabled: false
+    bootstrapAdmin:
+      username: admin
+      password: staging-secret
+    spec:
+      instances: 1
+
+realmImports:
+  - name: prod-realm
+    # keycloakCRName is required when more than one instance is enabled;
+    # with a single instance it defaults to that instance's name.
+    keycloakCRName: keycloak-prod
+    realm:
+      realm: prod
+      enabled: true
+```
+
 ### Bootstrap admin
 
-Keycloak 26+ refuses to start without bootstrap admin credentials. When the
-chart manages the `Keycloak` CR and you have not set `spec.bootstrapAdmin`
-yourself, it:
+Keycloak 26+ refuses to start without bootstrap admin credentials. For every
+enabled instance where you have not set `spec.bootstrapAdmin` yourself, the
+chart:
 
-1. creates a Secret `<keycloak CR name>-bootstrap-admin` with the keys
-   `username` / `password` taken verbatim from `keycloak.bootstrapAdmin.username`
-   / `.password` (`keycloak.bootstrapAdmin.create`, default `true`) — the
-   credentials are **mandatory** in this mode and enforced by
+1. creates a Secret `<name>-bootstrap-admin` with the keys
+   `username` / `password` taken verbatim from the instance's
+   `bootstrapAdmin.username` / `.password` (`bootstrapAdmin.create`, default
+   `true`) — the credentials are **mandatory** in this mode and enforced by
    `values.schema.json`; there is no generated default, and
 2. injects `spec.bootstrapAdmin.user.secret` referencing that Secret.
 
 To use a Secret you manage yourself (e.g. from Vault / External Secrets):
 
-```console
-helm install keycloak ./charts/keycloak-operator -n keycloak \
-  --set keycloak.enabled=true \
-  --set keycloak.bootstrapAdmin.existingSecret=my-corp-keycloak-admin
+```yaml
+keycloakInstances:
+  - name: keycloak
+    bootstrapAdmin:
+      existingSecret: my-corp-keycloak-admin
+    spec:
+      instances: 1
 ```
 
 The Secret name used for the injection is printed in the post-install NOTES
-together with a command to read the generated password.
+together with a command to read the password.
 
 ## Watch scopes
 
@@ -163,16 +207,17 @@ kubectl delete crd keycloaks.k8s.keycloak.org keycloakrealmimports.k8s.keycloak.
 | `extraVolumes` | `[]` | Extra volumes (e.g. custom CA bundle). |
 | `extraVolumeMounts` | `[]` | Extra container volume mounts. |
 | `livenessProbe` / `readinessProbe` / `startupProbe` | upstream defaults | Container probes (`/q/health/*` on port `http`); set to `null` to remove. |
-| `keycloak.enabled` | `false` | Create a `Keycloak` CR. |
-| `keycloak.nameOverride` | `""` (release name) | Name of the `Keycloak` CR. |
-| `keycloak.bootstrapAdmin.existingSecret` | `""` | Use an existing Secret (`username`/`password` keys) instead of creating one; injected into `spec.bootstrapAdmin.user.secret`. |
-| `keycloak.bootstrapAdmin.create` | `true` | Create the bootstrap admin Secret (ignored when `existingSecret` is set or `spec.bootstrapAdmin` is configured manually). |
-| `keycloak.bootstrapAdmin.secretName` | `""` (`<CR name>-bootstrap-admin`) | Name of the created Secret. |
-| `keycloak.bootstrapAdmin.username` | `admin` | Bootstrap admin username (required when the chart creates the Secret). |
-| `keycloak.bootstrapAdmin.password` | `""` | Bootstrap admin password — must be set when the chart creates the Secret (enforced by `values.schema.json`). |
-| `keycloak.bootstrapAdmin.secretAnnotations` | `{}` | Extra annotations for the created Secret. |
-| `keycloak.labels` / `keycloak.annotations` | `{}` | Extra CR metadata. |
-| `keycloak.spec` | `{}` | `spec` of the `Keycloak` CR ([reference](https://www.keycloak.org/operator/custom-resources)). |
+| `keycloakInstances` | `[]` | List of `Keycloak` CRs to create; each entry: `name` (required), `enabled`, `labels`, `annotations`, `spec`, `bootstrapAdmin`. |
+| `keycloakInstances[].name` | — | Name of the `Keycloak` CR (required). |
+| `keycloakInstances[].enabled` | `true` | Set to `false` to skip the instance without removing it from values. |
+| `keycloakInstances[].labels` / `.annotations` | `{}` | Extra CR metadata. |
+| `keycloakInstances[].spec` | `{}` | `spec` of the `Keycloak` CR ([reference](https://www.keycloak.org/operator/custom-resources)). |
+| `keycloakInstances[].bootstrapAdmin.existingSecret` | `""` | Use an existing Secret (`username`/`password` keys) instead of creating one; injected into `spec.bootstrapAdmin.user.secret`. |
+| `keycloakInstances[].bootstrapAdmin.create` | `true` | Create the bootstrap admin Secret (ignored when `existingSecret` is set or `spec.bootstrapAdmin` is configured manually). |
+| `keycloakInstances[].bootstrapAdmin.secretName` | `""` (`<name>-bootstrap-admin`) | Name of the created Secret. |
+| `keycloakInstances[].bootstrapAdmin.username` | — | Bootstrap admin username (required when the chart creates the Secret). |
+| `keycloakInstances[].bootstrapAdmin.password` | — | Bootstrap admin password — required when the chart creates the Secret (enforced by `values.schema.json`). |
+| `keycloakInstances[].bootstrapAdmin.secretAnnotations` | `{}` | Extra annotations for the created Secret. |
 | `realmImports` | `[]` | List of `KeycloakRealmImport` CRs (`name`, `keycloakCRName`, `realm`, `resources`, `labels`). |
 
 Specify each parameter with `--set key=value[,key=value]` or `-f values.yaml`.

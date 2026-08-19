@@ -1,22 +1,30 @@
-{{- if .Values.keycloak.enabled }}
-{{- $spec := deepCopy (.Values.keycloak.spec | default dict) -}}
-{{- if eq (include "keycloak-operator.bootstrapAdminInjected" .) "true" -}}
-{{-   $_ := set $spec "bootstrapAdmin" (dict "user" (dict "secret" (include "keycloak-operator.bootstrapAdminSecretName" . | trunc 63 | trimSuffix "-"))) -}}
-{{- end }}
+{{- range $instance := .Values.keycloakInstances }}
+{{-   if dig "enabled" true $instance }}
+{{-     $rawSpec := required (printf "keycloakInstances[%s].spec is required when the instance is enabled" $instance.name) $instance.spec }}
+{{-     $spec := deepCopy ($rawSpec | default dict) }}
+{{-     $ba := $instance.bootstrapAdmin | default dict }}
+{{-     if not (hasKey $spec "bootstrapAdmin") }}
+{{-       if or $ba.existingSecret ($ba.create | default true) }}
+{{-         $secretName := $ba.existingSecret | default $ba.secretName | default (printf "%s-bootstrap-admin" $instance.name) | trunc 63 | trimSuffix "-" }}
+{{-         $_ := set $spec "bootstrapAdmin" (dict "user" (dict "secret" $secretName)) }}
+{{-       end }}
+{{-     end }}
+---
 apiVersion: k8s.keycloak.org/v2beta1
 kind: Keycloak
 metadata:
-  name: {{ include "keycloak-operator.keycloakCRName" . }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ required "keycloakInstances[].name is required" $instance.name | trunc 63 | trimSuffix "-" }}
+  namespace: {{ $.Release.Namespace }}
   labels:
-    {{- include "keycloak-operator.labels" . | nindent 4 }}
-    {{- with .Values.keycloak.labels }}
+    {{- include "keycloak-operator.labels" $ | nindent 4 }}
+    {{- with $instance.labels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
-  {{- with .Values.keycloak.annotations }}
+  {{- with $instance.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- required "keycloak.spec is required when keycloak.enabled is true" $spec | toYaml | nindent 2 }}
+  {{- $spec | toYaml | nindent 2 }}
+{{-   end }}
 {{- end }}

@@ -99,25 +99,56 @@
     "livenessProbe": { "type": "object" },
     "readinessProbe": { "type": "object" },
     "startupProbe": { "type": "object" },
-    "keycloak": {
-      "type": "object",
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "nameOverride": { "type": "string" },
-        "labels": { "type": "object" },
-        "annotations": { "type": "object" },
-        "spec": { "type": "object" },
-        "bootstrapAdmin": {
-          "type": "object",
-          "properties": {
-            "existingSecret": { "type": "string" },
-            "create": { "type": "boolean" },
-            "secretName": { "type": "string" },
-            "username": { "type": "string" },
-            "password": { "type": "string" },
-            "secretAnnotations": { "type": "object" }
+    "keycloakInstances": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "enabled": { "type": "boolean" },
+          "labels": { "type": "object" },
+          "annotations": { "type": "object" },
+          "spec": { "type": "object" },
+          "bootstrapAdmin": {
+            "type": "object",
+            "properties": {
+              "existingSecret": { "type": "string" },
+              "create": { "type": "boolean" },
+              "secretName": { "type": "string" },
+              "username": { "type": "string" },
+              "password": { "type": "string" },
+              "secretAnnotations": { "type": "object" }
+            }
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "enabled": { "not": { "const": false } },
+                "spec": { "not": { "required": ["bootstrapAdmin"] } },
+                "bootstrapAdmin": {
+                  "properties": {
+                    "existingSecret": { "const": "" },
+                    "create": { "not": { "const": false } }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "bootstrapAdmin": {
+                  "required": ["username", "password"],
+                  "properties": {
+                    "username": { "minLength": 1 },
+                    "password": { "minLength": 1 }
+                  }
+                }
+              }
+            }
+          }
+        ]
       }
     },
     "realmImports": {
@@ -134,41 +165,5 @@
         }
       }
     }
-  },
-  "allOf": [
-    {
-      "if": {
-        "properties": {
-          "keycloak": {
-            "required": ["enabled", "spec", "bootstrapAdmin"],
-            "properties": {
-              "enabled": { "const": true },
-              "spec": { "not": { "required": ["bootstrapAdmin"] } },
-              "bootstrapAdmin": {
-                "required": ["existingSecret", "create"],
-                "properties": {
-                  "existingSecret": { "const": "" },
-                  "create": { "const": true }
-                }
-              }
-            }
-          }
-        },
-        "required": ["keycloak"]
-      },
-      "then": {
-        "properties": {
-          "keycloak": {
-            "bootstrapAdmin": {
-              "required": ["username", "password"],
-              "properties": {
-                "username": { "minLength": 1 },
-                "password": { "minLength": 1 }
-              }
-            }
-          }
-        }
-      }
-    }
-  ]
+  }
 }

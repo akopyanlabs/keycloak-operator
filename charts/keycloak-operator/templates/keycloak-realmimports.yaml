@@ -1,4 +1,19 @@
+{{- /* Names of enabled keycloakInstances, used to default keycloakCRName. */}}
+{{- $enabledInstances := list }}
+{{- range .Values.keycloakInstances }}
+{{-   if dig "enabled" true . }}
+{{-     $enabledInstances = append $enabledInstances .name }}
+{{-   end }}
+{{- end }}
 {{- range .Values.realmImports }}
+{{-   $crName := .keycloakCRName | default "" }}
+{{-   if not $crName }}
+{{-     if eq (len $enabledInstances) 1 }}
+{{-       $crName = index $enabledInstances 0 }}
+{{-     else }}
+{{-       fail "realmImports[].keycloakCRName is required when the number of enabled keycloakInstances is not exactly 1" }}
+{{-     end }}
+{{-   end }}
 ---
 apiVersion: k8s.keycloak.org/v2beta1
 kind: KeycloakRealmImport
@@ -11,7 +26,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
-  keycloakCRName: {{ default (include "keycloak-operator.keycloakCRName" $) .keycloakCRName | trunc 63 | trimSuffix "-" }}
+  keycloakCRName: {{ $crName | trunc 63 | trimSuffix "-" }}
   {{- with .resources }}
   resources:
     {{- toYaml . | nindent 4 }}
