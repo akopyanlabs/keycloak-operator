@@ -102,9 +102,7 @@ jobs:
           git fetch origin '+refs/heads/gh-pages:refs/remotes/origin/gh-pages' '+refs/heads/master:refs/remotes/origin/master'
           git checkout -f -B gh-pages origin/gh-pages
           git show origin/master:README.md > README.md
-          # Disable Jekyll so GitHub Pages serves index.yaml as-is.
-          touch .nojekyll
-          git add README.md .nojekyll
+          git add README.md
           if ! git diff --cached --quiet; then
             git commit -m "chore: sync README.md from master"
             git push origin gh-pages
