@@ -7,9 +7,10 @@ name: Release Chart
 # branch. No external v* tags are required.
 #
 # The gh-pages branch is created automatically (empty orphan branch via
-# git commit-tree, without switching the working tree), GitHub Pages is
-# enabled best-effort via the API, and README.md from the repository root
-# is synced to gh-pages, where it becomes the site index page.
+# git commit-tree, without switching the working tree), and README.md from
+# the repository root is synced to gh-pages, where it becomes the site
+# index page. GitHub Pages itself must be enabled once manually:
+# Settings -> Pages -> Deploy from a branch -> gh-pages / (root).
 on:
   # Manual run from the Actions UI ("Run workflow").
   # chart-releaser publishes a new release only when the chart version in
@@ -64,7 +65,6 @@ jobs:
     needs: lint
     permissions:
       contents: write
-      pages: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -88,17 +88,6 @@ jobs:
             COMMIT=$(git commit-tree "$EMPTY_TREE" -m "Initialize gh-pages branch")
             git push origin "$COMMIT:refs/heads/gh-pages"
             echo "gh-pages branch created"
-          fi
-
-      - name: Enable GitHub Pages from gh-pages (best effort)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh api "repos/${{ github.repository }}/pages" -X POST \
-              -f 'source[branch]=gh-pages' -f 'source[path]=/' >/dev/null 2>&1; then
-            echo "GitHub Pages enabled (gh-pages / root)"
-          else
-            echo "::warning::Could not enable GitHub Pages via API - configure it manually: Settings -> Pages -> Deploy from a branch -> gh-pages / (root)"
           fi
 
       - name: Run chart-releaser
