@@ -11,8 +11,7 @@ name: Release Chart
 # enabled best-effort via the API, and README.md from the repository root
 # is synced to gh-pages, where it becomes the site index page.
 on:
-  # Manual run from the Actions UI ("Run workflow"). Path filters do not
-  # apply to workflow_dispatch, so both jobs run (lint -> release).
+  # Manual run from the Actions UI ("Run workflow").
   # chart-releaser publishes a new release only when the chart version in
   # Chart.yaml changed since the last release; the gh-pages steps (branch,
   # Pages, README sync) run unconditionally.
@@ -20,9 +19,6 @@ on:
   push:
     branches:
       - master
-    paths:
-      - "charts/**"
-      - ".github/workflows/release.yml"
 
 concurrency:
   group: chart-release
