@@ -1,0 +1,41 @@
+apiVersion: v1
+entries:
+  keycloak-operator:
+  - annotations:
+      artifacthub.io/category: security
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Keycloak Operator documentation
+          url: https://www.keycloak.org/operator
+        - name: Source
+          url: https://github.com/keycloak/keycloak
+    apiVersion: v2
+    appVersion: 26.7.2
+    created: "2026-08-19T18:13:44.752991944Z"
+    description: 'A Helm chart for the Keycloak Operator (k8s.keycloak.org). Deploys
+      the official operator from the Keycloak project, installs the Keycloak CRDs
+      (Keycloak, KeycloakRealmImport, KeycloakOIDCClient, KeycloakSAMLClient) and
+      can optionally manage Keycloak instances through Custom Resources. Runs cluster-wide
+      by default (can be restricted to a set of namespaces). '
+    digest: f73ff994d3715663d978f66ae78849c12077e50d047139573dc5b95a6ae7c124
+    home: https://github.com/akopyanlabs/keycloak-operator
+    icon: https://design.jboss.org/keycloak/logo/images/keycloak_logo_600px.svg
+    keywords:
+    - keycloak
+    - operator
+    - identity
+    - sso
+    - oidc
+    - saml
+    - authentication
+    maintainers:
+    - name: Armen Akopyan
+    name: keycloak-operator
+    sources:
+    - https://github.com/akopyanlabs/keycloak-operator
+    - https://github.com/keycloak/keycloak
+    type: application
+    urls:
+    - https://github.com/akopyanlabs/keycloak-operator/releases/download/keycloak-operator-26.7.2/keycloak-operator-26.7.2.tgz
+    version: 26.7.2
+generated: "2026-08-19T18:13:44.75300159Z"
