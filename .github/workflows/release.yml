@@ -94,6 +94,10 @@ jobs:
         uses: helm/chart-releaser-action@v1.7.0
         with:
           charts_dir: charts
+          # Chart files may change without a version bump (docs, license,
+          # etc.) - do not fail when the release for this version already
+          # exists; publish happens on the next version bump instead.
+          skip_existing: true
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
