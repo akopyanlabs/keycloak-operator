@@ -106,11 +106,11 @@ jobs:
           git fetch origin '+refs/heads/gh-pages:refs/remotes/origin/gh-pages' '+refs/heads/master:refs/remotes/origin/master'
           git checkout -f -B gh-pages origin/gh-pages
           git show origin/master:README.md > README.md
-          # Override the default GitHub Pages (Primer) theme footer, which
-          # renders "This site is open source. Improve this page.".
-          mkdir -p _includes
-          : > _includes/footer.html
-          git add README.md _includes/footer.html
+          # Override the default GitHub Pages (Primer) theme layout to drop
+          # the "This site is open source. Improve this page." footer.
+          mkdir -p _layouts
+          git show origin/master:pages/default.html > _layouts/default.html
+          git add README.md _layouts/default.html
           if ! git diff --cached --quiet; then
             git commit -m "chore: sync README.md from master"
             git push origin gh-pages
