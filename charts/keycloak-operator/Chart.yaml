@@ -19,6 +19,7 @@ keywords:
   - saml
   - authentication
 home: https://github.com/akopyanlabs/keycloak-operator
+icon: https://design.jboss.org/keycloak/logo/images/keycloak_logo_600px.svg
 sources:
   - https://github.com/akopyanlabs/keycloak-operator
   - https://github.com/keycloak/keycloak
