@@ -9,6 +9,9 @@ Expand the name of the chart.
 {{/*
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields (e.g. DNS labels) have that limit.
+When the release name is a prefix of the chart name (e.g. release "keycloak" for the
+"keycloak-operator" chart), the chart name alone is used to avoid names like
+"keycloak-keycloak-operator".
 */}}
 {{- define "keycloak-operator.fullname" -}}
 {{- if .Values.fullnameOverride -}}
@@ -17,6 +20,8 @@ We truncate at 63 chars because some Kubernetes name fields (e.g. DNS labels) ha
 {{- $name := default .Chart.Name .Values.nameOverride -}}
 {{- if contains $name .Release.Name -}}
 {{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else if contains .Release.Name $name -}}
+{{- $name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
